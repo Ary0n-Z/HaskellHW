@@ -22,11 +22,10 @@ max' :: [Integer] -> Integer
 max' arr
    | length arr <= 1 = head arr
    | otherwise = max' (dropMinHeadLast arr)
-
-dropMinHeadLast :: [Integer] -> [Integer]
-dropMinHeadLast arr
-              | head arr > last arr = init arr
-              | otherwise = tail arr  
+   where dropMinHeadLast arr
+                           | head arr > last arr = init arr
+                           | otherwise = tail arr  
+              
 -- 4) power of two  2->True; 14 -> False; 16 -> True
 powOfTwo :: Integer -> Bool
 powOfTwo num

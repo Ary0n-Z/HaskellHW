@@ -30,6 +30,7 @@ dropMinHeadLast arr
 -- 4) power of two  2->True; 14 -> False; 16 -> True
 powOfTwo :: Integer -> Bool
 powOfTwo num
+       | num < 1 = False
        | num == 2 = True
-       | num == 3 = False
-       |otherwise = powOfTwo (div num 2)
+       | mod num 2 == 0 = powOfTwo (div num 2)
+       |otherwise = False

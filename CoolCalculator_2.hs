@@ -7,21 +7,6 @@ type LastExpr = (ExprStartIndex,ExprEndIndex)
 coolCalculator :: String -> Double
 coolCalculator expr = calculator.coolCalculate.wordsWhen (==' ') $ (coolBracketsSugar expr)
 
-coolBracketsSugar :: String -> String
-coolBracketsSugar expr = reverse (coolRightBracketsSugar (reverse (coolLeftBracketsSugar expr)))
-
-coolLeftBracketsSugar :: String -> String
-coolLeftBracketsSugar [] = []
-coolLeftBracketsSugar (x:xs)
-                | x == '(' = x : ' ' : coolLeftBracketsSugar xs
-                | otherwise = x : coolLeftBracketsSugar xs
-
-coolRightBracketsSugar :: String -> String
-coolRightBracketsSugar [] = []
-coolRightBracketsSugar (x:xs)
-                | x == ')' = x : ' ' : coolRightBracketsSugar xs
-                | otherwise = x : coolRightBracketsSugar xs
-
 coolCalculate :: [String] -> [String]
 coolCalculate expr = if startIndex == endIndex then expr
                      else coolCalculate updatedExpr
@@ -97,3 +82,19 @@ lastOperationIndex arr
                           minusIndex = Data.List.elemIndex "-" arr
                           multIndex = Data.List.elemIndex "*" arr
                           devIndex = Data.List.elemIndex "/" arr
+
+
+coolBracketsSugar :: String -> String
+coolBracketsSugar expr = reverse (coolRightBracketsSugar (reverse (coolLeftBracketsSugar expr)))
+
+coolLeftBracketsSugar :: String -> String
+coolLeftBracketsSugar [] = []
+coolLeftBracketsSugar (x:xs)
+                | x == '(' = x : ' ' : coolLeftBracketsSugar xs
+                | otherwise = x : coolLeftBracketsSugar xs
+
+coolRightBracketsSugar :: String -> String
+coolRightBracketsSugar [] = []
+coolRightBracketsSugar (x:xs)
+                | x == ')' = x : ' ' : coolRightBracketsSugar xs
+                | otherwise = x : coolRightBracketsSugar xs

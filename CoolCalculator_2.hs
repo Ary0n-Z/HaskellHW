@@ -83,6 +83,11 @@ lastOperationIndex arr
                           multIndex = Data.List.elemIndex "*" arr
                           devIndex = Data.List.elemIndex "/" arr
 
+lastOperationIndex2 :: [String] -> [String] -> Maybe Int
+lastOperationIndex2 _ [] = Nothing
+lastOperationIndex2 expr (x:xs)= case elemIndex x expr of
+                                (Just index) -> (Just index)
+                                Nothing -> lastOperationIndex2 expr xs
 
 coolBracketsSugar :: String -> String
 coolBracketsSugar expr = reverse (coolRightBracketsSugar (reverse (coolLeftBracketsSugar expr)))

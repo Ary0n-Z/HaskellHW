@@ -1,5 +1,6 @@
 import Data.List
 -------------------CoolPart:
+
 type ExprStartIndex = Int
 type ExprEndIndex = Int
 type LastExpr = (ExprStartIndex,ExprEndIndex)
@@ -35,60 +36,8 @@ wordsWhen p s =  case dropWhile p s of
                       "" -> []
                       s' -> w : wordsWhen p s''
                             where (w, s'') = break p s'
--------------------
--------------------
-data Op = Plus | Minus | Devision | Multiplication
-data Tree = Leaf Double 
-         | Node Op Tree Tree
-
-calculator :: [String] -> Double
-calculator expr = calculate.createTree $ expr
-
-calculate:: Tree -> Double
-calculate tr = case tr of 
-                    Leaf value ->  value
-                    Node op left right -> (((getOpFunc op) $ (calculate left)) (calculate right))
-
-createTree :: [String] -> Tree
-createTree expr = case lastOperationIndex expr of
-                (Just index) -> (Node 
-                                   (getOp (expr !! index))
-                                   (createTree (take index expr))
-                                   (createTree (drop (index + 1) expr)))
-                Nothing -> Leaf (read.head $ expr :: Double)
-
-getOpFunc :: Fractional a => Op -> (a -> a -> a)
-getOpFunc op = case op of
-                Plus -> (+)
-                Minus -> (-)
-                Devision -> (/)
-                Multiplication -> (*)
-
-getOp :: String -> Op
-getOp "+" = Plus
-getOp "-" = Minus
-getOp "*" = Multiplication
-getOp "/" = Devision
-
-lastOperationIndex :: [String] -> Maybe Int                 
-lastOperationIndex arr
-                   | plusIndex /= Nothing = plusIndex
-                   | minusIndex /= Nothing = minusIndex
-                   | multIndex /= Nothing = multIndex
-                   | devIndex /= Nothing = devIndex
-                   | otherwise = Nothing
-                          where 
-                          plusIndex = Data.List.elemIndex "+" arr
-                          minusIndex = Data.List.elemIndex "-" arr
-                          multIndex = Data.List.elemIndex "*" arr
-                          devIndex = Data.List.elemIndex "/" arr
-
-lastOperationIndex2 :: [String] -> [String] -> Maybe Int
-lastOperationIndex2 _ [] = Nothing
-lastOperationIndex2 expr (x:xs)= case elemIndex x expr of
-                                (Just index) -> (Just index)
-                                Nothing -> lastOperationIndex2 expr xs
-
+                            
+-- Syntax sugar for brackets. Not optimized
 coolBracketsSugar :: String -> String
 coolBracketsSugar expr = reverse (coolRightBracketsSugar (reverse (coolLeftBracketsSugar expr)))
 
@@ -103,3 +52,39 @@ coolRightBracketsSugar [] = []
 coolRightBracketsSugar (x:xs)
                 | x == ')' = x : ' ' : coolRightBracketsSugar xs
                 | otherwise = x : coolRightBracketsSugar xs
+          
+----------------------------------------------------------
+------------------- Default calculator -------------------
+
+type Expression = String
+data Op = Plus | Minus | Devision | Multiplication
+
+data Tree = Leaf Double 
+         | Node (MathOperation (Double->Double->Double)) Tree Tree
+         
+data MathOperation a = MathOperation String a
+
+defaultOperations :: [MathOperation (Double -> Double -> Double)]
+defaultOperations =  [MathOperation "+" (+),MathOperation "-" (-), MathOperation "*" (*), MathOperation "/" (/)]
+
+calculator :: [Expression] -> Double
+calculator expr = calculate.createTree $ expr
+
+calculate:: Tree -> Double
+calculate tr = case tr of 
+                    Leaf value ->  value
+                    Node (MathOperation _ op) left right -> ((op $ (calculate left)) (calculate right))
+
+createTree :: [Expression] -> Tree
+createTree expr = case lastOperationIndex expr defaultOperations of
+                (Just (index,op)) -> (Node 
+                                   (MathOperation (expr !! index) op)
+                                   (createTree (take index expr))
+                                   (createTree (drop (index + 1) expr)))
+                Nothing -> Leaf (read.head $ expr :: Double)
+
+lastOperationIndex :: [Expression] -> [MathOperation (Double -> Double -> Double)] -> Maybe (Int,(Double -> Double -> Double))
+lastOperationIndex _ [] = Nothing
+lastOperationIndex expr ((MathOperation opName op):xs)= case elemIndex opName expr of
+                                (Just index) -> (Just (index,op))
+                                Nothing -> lastOperationIndex expr xs

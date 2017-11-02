@@ -1,6 +1,9 @@
 import Data.List
--------------------CoolPart:
 
+----------------------------------------------------------
+------------------- Cool calculator -------------------
+-- coolCalculator supports brackets
+-- example: > coolCalculator "(3 + 6 / (34.2 - (-34)) / 2) - (-3.354 + 8 * 3)"
 type ExprStartIndex = Int
 type ExprEndIndex = Int
 type LastExpr = (ExprStartIndex,ExprEndIndex)
@@ -30,40 +33,30 @@ getStartIndex expr endIndex
                     | expr !! endIndex == "(" = endIndex
                     | otherwise = getStartIndex expr (endIndex-1)
 
---found in the net:
+-- Cut String to [String] if p at char returns true. Found in the Net. 
 wordsWhen :: (Char -> Bool) -> String -> [String]
 wordsWhen p s =  case dropWhile p s of
                       "" -> []
                       s' -> w : wordsWhen p s''
                             where (w, s'') = break p s'
                             
--- Syntax sugar for brackets. Not optimized
+-- Syntax sugar for brackets.
 coolBracketsSugar :: String -> String
-coolBracketsSugar expr = reverse (coolRightBracketsSugar (reverse (coolLeftBracketsSugar expr)))
-
-coolLeftBracketsSugar :: String -> String
-coolLeftBracketsSugar [] = []
-coolLeftBracketsSugar (x:xs)
-                | x == '(' = x : ' ' : coolLeftBracketsSugar xs
-                | otherwise = x : coolLeftBracketsSugar xs
-
-coolRightBracketsSugar :: String -> String
-coolRightBracketsSugar [] = []
-coolRightBracketsSugar (x:xs)
-                | x == ')' = x : ' ' : coolRightBracketsSugar xs
-                | otherwise = x : coolRightBracketsSugar xs
-          
+coolBracketsSugar [] = []
+coolBracketsSugar (x:xs)
+                 | x == '(' = x : ' ' : coolBracketsSugar xs
+                 | x == ')' = ' ' : x : coolBracketsSugar xs
+                 | otherwise = x : coolBracketsSugar xs
 ----------------------------------------------------------
 ------------------- Default calculator -------------------
+-- example: > calculator ["4", "-", "5", "*", "2"]
 
 type Expression = String
-data Op = Plus | Minus | Devision | Multiplication
 
+data MathOperation a = MathOperation String a
 data Tree = Leaf Double 
          | Node (MathOperation (Double->Double->Double)) Tree Tree
          
-data MathOperation a = MathOperation String a
-
 defaultOperations :: [MathOperation (Double -> Double -> Double)]
 defaultOperations =  [MathOperation "+" (+),MathOperation "-" (-), MathOperation "*" (*), MathOperation "/" (/)]
 

@@ -10,15 +10,22 @@ instance Ord TODO_item where
     compare (TODO_item a) (TODO_item b) = compare a b
 
 type TODO_List = [TODO_item]
-{-
-data Command = Command{
+
+data Command = PureCommand{
                  commandName    :: String
                 ,commandAction  :: TODO_List -> String -> TODO_List
                }
--}
+               |IoCommand{
+                commandName    :: String
+               ,commandIOAction  :: TODO_List -> String -> IO ()
+               }
+               
+isPureCommand (PureCommand _ _) = True
+isPureCommand _                 = False
+
 ---------------------const strings
---cEXIT_COMMAND = "exit"
-cNO_COMMAND_EXIST = "No command exis"
+
+cNO_COMMAND_EXIST = "No command exist"
 cINVALID_COMMAND = "Invalid command"
 cINCORRECT_ID = "Incorrect ID"
 cNO_ID_EXIST = "No item with that ID exist"
@@ -31,25 +38,127 @@ cDEFAULT_COMMANDS_HELP_LIST =[
                 ,"*remove [item id]*. Put away iem from your todo list"
                 ,"*show* Display current too list"
                 ,"*save* Save current todo list into the file in "
-                ,"*sort* todo list in alphabeic order through quicksort"
+                ,"*sort* [-d] todo list in alphabeic order in ascending order by default or descending order"
                 ,"*help [command name]*. Show help."]
 cDEFAULT_COMMANDS_NAME_HELP_LIST = zip cDEFAULT_COMMANDS_LIST cDEFAULT_COMMANDS_HELP_LIST
 cINTRO_MSG = "  Default commands:\n " ++ (intercalate "; " cDEFAULT_COMMANDS_LIST) ++"\nFor quick help, use command > help [command name]"
 
 ---------------------main entry point
+
 main :: IO()
 main = do
       printMessage cINTRO_MSG      
       todoShell []
 
 ---------------------main todo shell
+
 todoShell :: TODO_List -> IO()
 todoShell todo_list = do
                 printPrompt cDEFAULT_PROMPT
-                command <- getLine
-                execute command todo_list
+                commandLine <- getLine
+                execute (extractCommandName commandLine []) (extractArgs commandLine) commandList  todo_list
 
----------------------IO cDEFAULT_COMMANDS_LIST
+--------------------------------Syntax parse
+
+extractCommandName :: String -> String-> String
+extractCommandName (x:line) command = if(x == ' ')
+                                  then command
+                                  else extractCommandName line (command ++ [x])
+extractCommandName [] command  = command
+
+extractArgs :: String -> String
+extractArgs (x:xs) = if(x==' ')then xs
+                     else extractArgs xs
+extractArgs [] = []
+
+--------------------------execute
+
+execute :: String -> String -> [Command] -> TODO_List -> IO()
+execute [] _ _ todoList = todoShell todoList
+execute cmdString args (commandItem:xs) todoList = do
+                                         if ((commandName commandItem) == cmdString)
+                                         then  do 
+                                            if (isPureCommand commandItem)
+                                            then do
+                                                let newTODOList = (commandAction commandItem) todoList args
+                                                todoShell newTODOList
+                                            else do 
+                                                (commandIOAction commandItem) todoList args
+                                         else execute cmdString args xs todoList
+execute cmdString args [] todoList = do
+                        printMessage cNO_COMMAND_EXIST
+                        todoShell todoList
+
+------------------------------Commands
+commandList = [
+              PureCommand "add" addCommand
+              ,PureCommand "remove" removeCommand
+              ,IoCommand "show" showCommand
+              ,PureCommand "sort" sortCommand
+              ,IoCommand "save" saveCommand
+              ,IoCommand "load" loadCommand
+              ,IoCommand "exit" exitCommand]
+              
+----Pure commands
+              
+addCommand :: TODO_List -> String -> TODO_List
+addCommand todoList [] = todoList
+addCommand todoList item = (todoList ++ [(TODO_item {description = item})])
+
+removeCommand :: TODO_List -> String -> TODO_List
+removeCommand todo_list args = 
+                       case fmap (remove todo_list) (readMaybe args :: Maybe Int) of
+                            Nothing -> todo_list
+                            Just (Just updated_todo_list) -> updated_todo_list
+                            Just Nothing -> todo_list
+{-                
+removeCommand :: TODO_List -> String -> IO ()
+removeCommand todo_list args = if isNum possibleId
+                               then do case (remove todo_list (toNum possibleId))
+                                       (Just newTODOList) -> todoShell newTODOList
+                                        Nothing -> do
+                                                printMessage cNO_ID_EXIST
+                                                todoShell todoList (remove todo_list)
+                               else do
+                                   printMessage cINCORRECT_ID
+                                   todoShell todoList (remove todo_list)
+                             where 
+                                possibleId = (readMaybe args :: Maybe Int)
+-}
+isNum :: (Maybe Int) -> Bool
+isNum (Just _) = True
+isNum Nothing = False
+
+toNum :: (Maybe Int) -> Int
+toNum (Just id) = id
+toNum Nothing = -1
+
+sortCommand :: TODO_List -> String -> TODO_List
+sortCommand todoList [] = sort todoList
+sortCommand todoList "-d" = reverse (sort todoList)
+sortCommand todoList _ = todoList
+
+----IO Commands, after execution they return control to todoShell
+
+showCommand :: TODO_List -> String -> IO ()
+showCommand todoList _ = do 
+                        printTODOList todoList
+                        todoShell todoList
+
+exitCommand :: TODO_List -> String -> IO ()
+exitCommand _ _ = return ()
+
+saveCommand ::  TODO_List -> String -> IO ()
+saveCommand todoList _ = do saveToFile cDEFAULT_FILEPATH todoList
+                            todoShell todoList
+
+loadCommand :: TODO_List -> String -> IO ()
+loadCommand _ _ = do 
+                    content <- readFile cDEFAULT_FILEPATH
+                    todoShell (fStringToTodo_list content)
+
+---------------------IO functions
+
 printPrompt :: String -> IO ()
 printPrompt promptString = putStr promptString
 
@@ -63,98 +172,7 @@ printTODOList :: TODO_List -> IO ()
 printTODOList todo_list = mapM_ printTODOItem (zip [0..] todo_list)
 
 saveToFile :: FilePath -> TODO_List -> IO ()
-saveToFile path todo_list = do 
-                             writeFile path (unlines (todo_listToFString todo_list))
-                             todoShell todo_list
-
-readFromFile :: FilePath -> IO ()
-readFromFile path = do
-                     content <- readFile cDEFAULT_FILEPATH
-                     todoShell (fStringToTodo_list content)
-
---------------------------execute
-{-
-execute :: String -> [Command] -> TODO_List -> IO()
-execute _ [] todoList = do 
-                        printMessage cNO_COMMAND_EXIST
-                        todoShell todoList
-execute cmdString (commandItem:xs) todoList = do
-                                         if (hasCommand (commandName commandItem) cmdString)
-                                         then  do 
-                                             let newTODOList = (commandAction commandItem) todoList (extractArgs cmdString (commandName commandItem)) 
-                                             printTODOList newTODOList
-                                             todoShell newTODOList
-                                         else execute cmdString xs todoList
-execute cEXIT_COMMAND _ _ = return ()
-
-
-hasCommand :: String -> String -> Bool
-hasCommand [] [] = True
-hasCommand [] _ = True;
-hasCommand  _ [] = False;
-hasCommand (cmdLetter:xs) (textLetter:ys) = if cmdLetter == textLetter
-                                            then hasCommand xs ys
-                                            else False
-extractArgs :: String -> String -> String
-extractArgs [] [] = []
-extractArgs args [] = args
-extractArgs (command:ys) (defaultCmd:xs) = extractArgs ys xs
--}
-
-execute :: String -> TODO_List -> IO ()
-execute ('a':'d':'d':' ':todo_item) todo_list = do
-                            let updated_todo_list = (todo_list ++ [(createTODO_item todo_item)])
-                            execute "show" updated_todo_list
-execute ('r':'e':'m':'o':'v':'e':' ':idS) todo_list = 
-                                 case fmap (remove todo_list) (readMaybe idS :: Maybe Int) of
-                                    Nothing -> do
-                                            printMessage cINCORRECT_ID
-                                            todoShell todo_list
-                                    Just (Just updated_todo_list) -> execute "show" updated_todo_list
-                                    Just Nothing -> do
-                                                 printMessage cNO_ID_EXIST
-                                                 todoShell todo_list
-execute ('h':'e':'l':'p':' ':command_name) todo_list = do
-                           printMessage (getHelp command_name cDEFAULT_COMMANDS_NAME_HELP_LIST)
-                           todoShell todo_list
-execute "save" todo_list = saveToFile cDEFAULT_FILEPATH todo_list
-execute "load" _ = readFromFile cDEFAULT_FILEPATH
-execute "sort" todo_list = do 
-                            let sortedList = quicksort todo_list
-                            execute "show" sortedList
-execute "show" todo_list = do
-                            printMessage "TODO_List :"
-                            printTODOList todo_list
-                            todoShell todo_list
-execute "" todo_list = todoShell todo_list
-execute "exit" _ = return ()
-execute _ todo_list = do
-                       printMessage cINVALID_COMMAND
-                       todoShell todo_list
-------------------------------Commands
-{-
-commandList = [Command "add " addCommand
-              ,Command "remove " removeCommand
-              ]
-              
-addCommand :: TODO_List -> String -> TODO_List
-addCommand todoList item = (todoList ++ [(TODO_item {description = item})])
-
-removeCommand :: TODO_List -> String -> TODO_List
-removeCommand todo_list args = 
-                       case fmap (remove todo_list) (readMaybe args :: Maybe Int) of
-                            Nothing -> todo_list
-                            Just (Just updated_todo_list) -> updated_todo_list
-                            Just Nothing -> todo_list
--}              
-
---------------------quick help (from files)
-getHelp :: String -> [(String,String)] -> String
-getHelp command_name ((commandName,commandHelp):xs) = 
-                                                if command_name == commandName
-                                                then commandHelp
-                                                else getHelp command_name xs
-getHelp _ [] = cNO_COMMAND_EXIST
+saveToFile path todo_list = do writeFile path (unlines (todo_listToFString todo_list))
 
 --------------------pure functions
 
@@ -164,13 +182,6 @@ remove (x:xs) n = do
                 _xs <- remove xs (n-1)
                 return (x:_xs)
 remove [] _ = Nothing
-
-quicksort :: Ord a => [a] -> [a]
-quicksort []     = []
-quicksort (x:xs) = (quicksort lesser) ++ [x] ++ (quicksort greater)
-    where
-        lesser  = filter (< x) xs
-        greater = filter (>= x) xs
 
 todo_listToFString :: TODO_List -> [String]
 todo_listToFString [] = []
@@ -182,9 +193,10 @@ fStringToTodo_list str = map createTODO_item (wordsWhen ('\n'==) str)
 createTODO_item :: String -> TODO_item
 createTODO_item args = TODO_item {description = args}
 
--- Cut String to [String] if p at char returns true. Found in the Net. 
+-- Cut String to [String] if p at char returns true. Found in the Net.
+
 wordsWhen :: (Char -> Bool) -> String -> [String]
 wordsWhen p s =  case dropWhile p s of
                       "" -> []
                       s' -> w : wordsWhen p s''
-                            where (w, s'') = break p s'
+                        where (w, s'') = break p s'

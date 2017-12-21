@@ -117,7 +117,7 @@ sortCommand todoList [] = sort todoList
 sortCommand todoList "-d" = reverse (sort todoList)
 sortCommand todoList _ = todoList
 
-----IO Commands, after execution they return control to todoShell
+----IO Commands, after execution they MUST return control to todoShell function
 
 showCommand :: TODO_List -> String -> IO ()
 showCommand todoList _ = do 

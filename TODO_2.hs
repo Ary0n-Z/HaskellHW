@@ -112,27 +112,6 @@ removeCommand todo_list args =
                             Nothing -> todo_list
                             Just (Just updated_todo_list) -> updated_todo_list
                             Just Nothing -> todo_list
-{-                
-removeCommand :: TODO_List -> String -> IO ()
-removeCommand todo_list args = if isNum possibleId
-                               then do case (remove todo_list (toNum possibleId))
-                                       (Just newTODOList) -> todoShell newTODOList
-                                        Nothing -> do
-                                                printMessage cNO_ID_EXIST
-                                                todoShell todoList (remove todo_list)
-                               else do
-                                   printMessage cINCORRECT_ID
-                                   todoShell todoList (remove todo_list)
-                             where 
-                                possibleId = (readMaybe args :: Maybe Int)
--}
-isNum :: (Maybe Int) -> Bool
-isNum (Just _) = True
-isNum Nothing = False
-
-toNum :: (Maybe Int) -> Int
-toNum (Just id) = id
-toNum Nothing = -1
 
 sortCommand :: TODO_List -> String -> TODO_List
 sortCommand todoList [] = sort todoList

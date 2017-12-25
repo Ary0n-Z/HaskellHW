@@ -91,7 +91,8 @@ execute cmdString args [] todoList = do
 
 ------------------------------Commands
 commandList = [
-              PureCommand "add" addCommand
+               IoCommand "help" helpCommand
+              ,PureCommand "add" addCommand
               ,PureCommand "remove" removeCommand
               ,IoCommand "show" showCommand
               ,PureCommand "sort" sortCommand
@@ -111,13 +112,39 @@ removeCommand todo_list args =
                             Nothing -> todo_list
                             Just (Just updated_todo_list) -> updated_todo_list
                             Just Nothing -> todo_list
+{-                
+removeCommand :: TODO_List -> String -> IO ()
+removeCommand todo_list args = if isNum possibleId
+                               then do case (remove todo_list (toNum possibleId))
+                                       (Just newTODOList) -> todoShell newTODOList
+                                        Nothing -> do
+                                                printMessage cNO_ID_EXIST
+                                                todoShell todoList (remove todo_list)
+                               else do
+                                   printMessage cINCORRECT_ID
+                                   todoShell todoList (remove todo_list)
+                             where 
+                                possibleId = (readMaybe args :: Maybe Int)
+-}
+isNum :: (Maybe Int) -> Bool
+isNum (Just _) = True
+isNum Nothing = False
+
+toNum :: (Maybe Int) -> Int
+toNum (Just id) = id
+toNum Nothing = -1
 
 sortCommand :: TODO_List -> String -> TODO_List
 sortCommand todoList [] = sort todoList
 sortCommand todoList "-d" = reverse (sort todoList)
 sortCommand todoList _ = todoList
 
-----IO Commands, after execution they MUST return control to todoShell function
+----IO Commands, after execution they return control to todoShell
+
+helpCommand :: TODO_List -> String -> IO ()
+helpCommand todoList  args = do 
+                    printMessage (getHelp cDEFAULT_COMMANDS_NAME_HELP_LIST args)
+                    todoShell todoList
 
 showCommand :: TODO_List -> String -> IO ()
 showCommand todoList _ = do 
@@ -155,6 +182,11 @@ saveToFile path todo_list = do writeFile path (unlines (todo_listToFString todo_
 
 --------------------pure functions
 
+getHelp ((cmdName,cmdHelp):xs) name = if name == cmdName
+                                      then cmdHelp
+                                      else getHelp xs name
+getHelp [] _ = cNO_COMMAND_EXIST
+
 remove :: [a] -> Int -> Maybe [a]
 remove (_:xs) 0 = Just xs
 remove (x:xs) n = do
@@ -179,26 +211,3 @@ wordsWhen p s =  case dropWhile p s of
                       "" -> []
                       s' -> w : wordsWhen p s''
                         where (w, s'') = break p s'
-----------------------Fail to refactor removeCommand func
-{-                
-removeCommand :: TODO_List -> String -> IO ()
-removeCommand todo_list args = if isNum possibleId
-                               then do case (remove todo_list (toNum possibleId))
-                                       (Just newTODOList) -> todoShell newTODOList
-                                        Nothing -> do
-                                                printMessage cNO_ID_EXIST
-                                                todoShell todoList (remove todo_list)
-                               else do
-                                   printMessage cINCORRECT_ID
-                                   todoShell todoList (remove todo_list)
-                             where 
-                                possibleId = (readMaybe args :: Maybe Int)
-
-isNum :: (Maybe Int) -> Bool
-isNum (Just _) = True
-isNum Nothing = False
-
-toNum :: (Maybe Int) -> Int
-toNum (Just id) = id
-toNum Nothing = -1
--}

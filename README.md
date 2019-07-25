@@ -1,2 +1,2 @@
 # HaskellHW
-Homeworks
+Trainings in learning haskell programming language
